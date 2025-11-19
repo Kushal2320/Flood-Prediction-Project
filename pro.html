@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Flood Risk — City Lookup (India)</title>
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  /* minimal map style if not in pro.css */
+  #map { height: 320px; width: 100%; border-radius:8px; }
+</style>
+
+  <link rel="stylesheet" href="pro.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1>Flood Risk — City Lookup (India)</h1>
+        <p class="lead">Type a city name, get real-time risk (OpenWeather) and community food/rescue board.</p>
+      </div>
+      <div class="muted"></div>
+    </header>
+
+    <section class="search-area">
+      <input id="cityInput" type="text" placeholder="Type city name (e.g. Mumbai, Chennai, Guwahati)" />
+      <div style="display:flex;gap:8px">
+        <button id="checkBtn" class="btn-primary">Check Risk</button>
+        <button id="resetBtn" class="btn-ghost">Reset</button>
+      </div>
+    </section>
+
+    <div class="main-grid">
+      <main>
+        <div id="resultCard" class="card" aria-live="polite">
+          <div id="emptyState">
+            <h2 style="margin:0 0 8px">Start by entering a city</h2>
+            <p class="muted">Data will be fetched from the backend when available.</p>
+          </div>
+
+          <div id="resultState" style="display:none">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div>
+                <h2 id="cityName" style="margin:0"></h2>
+                <div class="muted" id="coords"></div>
+              </div>
+              <div style="text-align:right">
+                <div id="riskPill" class="pill"></div>
+                <div class="muted" id="score" style="margin-top:6px;font-size:13px"></div>
+              </div>
+            </div>
+
+            <div style="margin-top:12px">
+              <h3 style="margin:0 0 6px">Why this level?</h3>
+              <p id="reason" class="muted"></p>
+            </div>
+
+            <div class="stats">
+              <div class="stat">
+                <div class="small">Rain (last 3h)</div>
+                <div class="num" id="r3">—</div>
+              </div>
+              <div class="stat">
+                <div class="small">Rain (last 24h)</div>
+                <div class="num" id="r24">—</div>
+              </div>
+              <div class="stat">
+                <div class="small">Alerts</div>
+                <div class="num" id="alertsCount">0</div>
+              </div>
+            </div>
+
+            <div style="margin-top:12px">
+              <h3 style="margin:0 0 6px">Safety Advice</h3>
+              <ul id="adviceList" class="small"></ul>
+            </div>
+
+            <div style="margin-top:12px">
+              <h3 style="margin:0 0 6px">Map</h3>
+              <!-- Leaflet map container -->
+              <div id="map" class="map-wrap" style="height:320px;border-radius:10px;overflow:hidden"></div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Food Help / Rescue Section -->
+        <div class="card" style="margin-top:14px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <h3 style="margin:0">Food Help & Rescue Board</h3>
+            <div class="small">Community requests & offers</div>
+          </div>
+
+          <div class="food-grid">
+            <!-- Request food form -->
+            <div>
+              <h4 style="margin-top:8px;margin-bottom:8px">Request Food / Help</h4>
+              <label for="reqName">Name</label>
+              <input id="reqName" placeholder="Your name" />
+
+              <label for="reqContact">Contact (phone/WhatsApp)</label>
+              <input id="reqContact" placeholder="e.g. +91xxxxxxxxxx" />
+
+              <label for="reqLocation">Location / Address</label>
+              <input id="reqLocation" placeholder="Neighborhood, landmark" />
+
+              <label for="reqDetails">Details (people count, special needs)</label>
+              <textarea id="reqDetails" rows="3"></textarea>
+
+              <div style="display:flex;gap:8px;margin-top:8px">
+                <button id="postRequestBtn" class="btn-primary">Post Request</button>
+                <button id="clearRequestBtn" class="btn-ghost">Clear</button>
+              </div>
+            </div>
+
+            <!-- Offer food form -->
+            <div>
+              <h4 style="margin-top:8px;margin-bottom:8px">Offer Food / Help</h4>
+              <label for="offerName">Name / Organisation</label>
+              <input id="offerName" placeholder="Your name or organisation" />
+
+              <label for="offerContact">Contact</label>
+              <input id="offerContact" placeholder="Phone / WhatsApp" />
+
+              <label for="offerLocation">Location (where food is available)</label>
+              <input id="offerLocation" placeholder="Address / landmark" />
+
+              <label for="offerDetails">Details (qty, timing, special food)</label>
+              <textarea id="offerDetails" rows="3"></textarea>
+
+              <div style="display:flex;gap:8px;margin-top:8px">
+                <button id="postOfferBtn" class="btn-primary">Post Offer</button>
+                <button id="clearOfferBtn" class="btn-ghost">Clear</button>
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top:12px">
+            <h4 style="margin:0 0 8px">Live Board</h4>
+            <div class="requests-list" id="board"></div>
+          </div>
+        </div>
+
+      </main>
+
+      <aside>
+        <div class="card">
+          <h4 style="margin:0 0 8px">Quick Actions</h4>
+          <div class="actions">
+            <button id="copySummary" class="btn-primary">Copy Summary</button>
+            <button id="showHelp" class="btn-ghost">How risk is calculated?</button>
+          </div>
+
+          <div style="margin-top:12px">
+            <h5 style="margin:0 0 6px">Useful links</h5>
+            <ul class="link-list small">
+              <li><a href="#">IMD Alerts</a></li>
+              <li><a href="#">Local Authority Contacts</a></li>
+              <li><a href="#">Evacuation Centres</a></li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:12px">
+          <h4 style="margin:0 0 8px">Tips</h4>
+          <ol class="small" style="padding-left:18px;margin:0">
+            <li>Move to higher ground if water levels rise.</li>
+            <li>Keep phones charged and keep emergency numbers handy.</li>
+            <li>Seal important documents in waterproof bags.</li>
+          </ol>
+        </div>
+      </aside>
+    </div>
+
+    <footer>
+      Built By - Kushal, Kunal, Anurag, Dona, Anushka, Ankit 😊
+    </footer>
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <script src="pro.js"></script>
+</body>
+</html>
